@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Active Lifestyle and Calories Burned</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Active Lifestyle and Calories Burned">
+  <meta name="author" content="Salvino A Salvaggio, PhD">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>Active Lifestyle and Calories Burned</h1>
+    <h2></h2>
+    <p>Salvino A Salvaggio, PhD<br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>Background</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>The <em>World Health Organisation</em> consider that obesity, diabetes, and hypertension are a new plague that is going to cause millions of deaths and sick people as well as a dramatic --and unsustainable-- increase in healthcare costs. The <em>Center for Diseae Control and Prevention</em> <a href="http://www.cdc.gov/obesity/data/adult.html">estimated</a> that the annual medical cost of obesity in the U.S. was $147 billion in 2008 U.S. dollars, while the medical costs for people who are obese were $1,429 higher than those of normal weight. Fortunately, prevention of chronic metabolic diseases is quite simple: a lifelong balanced nutrition coupled with an active lifestyle are mostly sufficient to protect us.</p>
+
+<p>The data analyzed here come from a Fitbit activity monitor (and the related Fitbit app on a smartphone). Each row provides the daily figures for several variables collected on one single individual over the period 24 Nov 2013 - 10 May 2014. Variables are all related to a healthy lifestyle: calories burned, number of steps, distance walked and number of very active minutes per day.</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="id" style="background:;">
+  <hgroup>
+    <h2>The dataset</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>Observations on several variables were collected from 24 Nov 2013 till 10 May 2014</p>
+
+<pre><code class="r">data &lt;- read.csv(&#39;fitbitData.csv&#39;, header=TRUE, na.strings = &#39;NA&#39;)
+rbind(head(data,2), tail(data,2))
+</code></pre>
+
+<pre><code>##           Date Cal.Burned Steps Walked.km V.Active.Min
+## 1   24/11/2013       2350 11158         9           45
+## 2   25/11/2013       2467 13248        11           66
+## 167 09/05/2014       1805  4185         4            5
+## 168 10/05/2014       1964  5756         5            2
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="id" style="background:;">
+  <hgroup>
+    <h2>Summary of variables</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">summary(data[,2:6])
+</code></pre>
+
+<pre><code>## Error: undefined columns selected
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="id" style="background:;">
+  <hgroup>
+    <h2>Example of linear regression / prediction</h2>
+  </hgroup>
+  <article data-timings="">
+    
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='Background'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='The dataset'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='Summary of variables'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='Example of linear regression / prediction'>
+         4
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
