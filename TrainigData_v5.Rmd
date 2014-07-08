@@ -1,0 +1,247 @@
+Training data
+========================================================
+Practical Machine Learning - Course Project - Salvino A. Salvaggio - July 2014
+
+```{r global_options, include=FALSE}
+library('knitr')
+opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+### Executive Summary
+Removing several variables which are empty or NAs reduced the original data set from 160 to 53 variables (52 predictors + variable 'classe' as outcome). A sampled subset (40% out of 19622 observations) of the reduced data set was then partioned in 2 equal parts for **training** and **validation**. Five (5) machine learning algorithms were run on the training set and accuracy measured, then the models were applied to the validation data set. In-sample and out-sample errors rates indicate that random forest algorithm is the most accurate in predicting. Finally, **the RF model was applied to the 20-case test data set and accurately predicted all the cases**.
+
+### Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it.
+
+* More information is available from the website [here] (http://groupware.les.inf.puc-rio.br/har) (see the section on the Weight Lifting Exercise Dataset)
+* The training data for this project are available [here] (https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv).
+* The test data are available [here] (https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv).
+* The data for this project come from this [source] (http://groupware.les.inf.puc-rio.br/har). 
+
+### Load files and preprocess data
+```{r LoadFiles, results='hide', cache=TRUE}
+# load library doMC that will force R to use all cores of Mac in parallel
+library('doMC')
+registerDoMC(cores = 2)
+set.seed(3846)
+test <- data.frame(read.csv('pml-testing.csv', header = T))
+data <- data.frame(read.csv('pml-training.csv', header = T))
+dim(data)
+str(data)
+head(data)
+```
+Many variables in the original data set are mostly populated with NAs or left empty. Removing them will not impact much machine learning algorithms.
+
+```{r InitialClean}
+library('plyr') ; library('caret')
+# populate empty cells with NAs
+data[data == ''] <- NA
+# define function to count NAs
+nmissing <- function(x) sum(is.na(x))
+# use colwise from plyr package to apply the function to columns
+missingNA <- colwise(nmissing)(data)
+# identify columns that have more than 50% NAs
+indexMissingNA <- missingNA >= dim(data)[1]/2
+# clean data base on such index
+data <- data[, !indexMissingNA]
+# manually remove user_name, timestamps
+data <- data[, -(1:7)]
+```
+
+The outcome of this initial cleaning is a data set reduced from 160 to 53 variables (52 predictors and the variable 'classe'). Reasons for removing the variables:
+* many variables are empty or populated with NAs
+* I decided to remove all variables which are not the outcome of a sensor (timestamps, user name)
+* 'window' variables are also removed, for they seem to mimic the behavior of the 'classe' variable (almost full correlation)
+
+### Data Partition
+
+The rationale behind the partition of the original data is as follows:
+
+* A 20-case test set is already provided, there therefore is no need to generate a new test set
+* The original training data set counts more than 19,000 observations --which is more than sufficient to train and validate the ML algorithms. Fourty percent of the observations will be randomly selected for that purpose
+* this 40% subset will then be split in 2 equal parts for training and validation. Each of these subset will therefore count 20% of the original data set
+
+
+```{r Sampling}
+# sample half of original observations
+sample <- data[sample(nrow(data), dim(data)[1]*0.4, replace=FALSE), ]
+
+# create training and validation subsets
+indexSample <- createDataPartition(y=sample$classe, p=.5, list=FALSE)
+training <- sample[indexSample,]
+validation <- sample[-indexSample,]
+```
+
+#### Identify and plot the most correlated variables
+As part of the initial data exploration this code identifies and plots the variables which have at least 0.9 correlation.
+```{r PlotCorrelated, fig.width=10, fig.height=10}
+# list the variables which are strongly correlated
+M <- abs(cor(training[,-53]))
+diag(M) <- 0
+strongCor <- which(M >= 0.9, arr.ind=TRUE)
+strongCorVariables <- sort(unique(strongCor[,1]))
+numStrongCor <- length(strongCorVariables)
+correlated <- training[, c(strongCorVariables, 53)]
+par(mar=c(2,2,2,2), cex.axis=0.8)
+pairs(correlated, main='Most correlated variables', col='steelblue')
+```
+
+### Machine learning
+
+In this chapter we will:
+
+1. run several ML algorithms (training)
+2. validate models by predicting values in validation data set, then compare accuracy, in-sample and out-sample error rates
+
+#### ML models
+
+Four algorithms will be tested: trees, random forest, GBM, support vector machine (SVM)
+
+Several tests showed that, in my case, time of calculation increases only by a couple of minutes when including all the 52 predictors instead of focusing on highly correlated variables only (MacBookPro 2014, 16GB RAM). However, whit a limited number of variables the accuracy of final testing drops. That is why, I have decided to run the ML models on all the predictors (52 variables)
+
+```{r MLmodels, cache=TRUE}
+library('randomForest')
+# 1- Trees (rpart method)
+fitTREE <- train(classe ~ ., data=training, method='rpart', preProcess=c("center", "scale"))
+
+# 2- Random Forest
+fitControlRF <- trainControl(method = "cv", number = 5)
+fitRF <- train(classe ~ ., data=training, method='rf', preProcess=c("center", "scale"), 
+               trControl = fitControlRF, prox=TRUE, verbose = FALSE)
+
+# 3- GBM
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 10)
+fitGBM <- train(classe ~ ., data = training, method = 'gbm', trControl = fitControl, 
+                verbose = FALSE)
+
+# 4- Support Vector Machine (SVM)
+fitSVM <- train(classe ~., data=training, method = 'svmLinear', trControl = fitControl)
+
+# 5- Principal Components Analysis (PCA)
+strongCorPCA <- which(M >= 0.7, arr.ind=TRUE)
+strongCorVariablesPCA <- sort(unique(strongCorPCA[,1]))
+numStrongCorPCA <- length(strongCorVariablesPCA)
+correlatedPCA <- training[, c(strongCorVariablesPCA, 53)]
+fitPCA <- train(correlatedPCA$classe ~ ., method='glmnet', preProcess='pca', 
+                data=correlatedPCA)
+```
+
+<u>Side note:</u>
+PCA shows that it takes only ~23 variables to capture 95% of all variance.
+```{r plotPCAcontributionfig.width=4, fig.height=5}
+PCAanalysis <- prcomp(training[,-dim(training)[2]], scale. = TRUE)
+varianceVector <- PCAanalysis$sdev ^ 2
+relativeVariance <- varianceVector / sum(varianceVector)
+cumulativeVariance <- cumsum(relativeVariance)
+plot(cumulativeVariance, type='s', main='Cumulative variance', 
+     ylab='Sum variance (PCA)', xlab='Index variables', ylim=c(0,1), col='blue', 
+     lwd=3)
+abline(v=25)
+abline(h=0.95)
+```
+
+
+#### Errors and validation
+
+```{r ErrorsValidation}
+method <- c('trees', 'RF', 'GBM', 'SVM', 'PCA')
+
+# in-sample error
+inSample.Accuracy <- c(max(fitTREE$results[,2]), 
+                       max(fitRF$results[,2]), 
+                       max(fitGBM$results[,4]),
+                       max(fitSVM$results[,2]),
+                       max(fitPCA$results[,3])
+                       )
+inSample.Error <- c(1 - max(fitTREE$results[,2]), 
+                    1 - max(fitRF$results[,2]), 
+                    1 - max(fitGBM$results[,4]),
+                    1 - max(fitSVM$results[,2]),
+                    1 - max(fitPCA$results[,3])
+                    )
+
+# TREE prediction on validation set
+predictedValuesTREE <- predict(fitTREE, validation)
+confM.TREE <- confusionMatrix(validation$classe, predictedValuesTREE)
+
+# RF prediction on validation set
+predictedValuesRF <- predict(fitRF, validation)
+confM.RF <- confusionMatrix(validation$classe, predictedValuesRF)
+
+# GBM prediction on validation set
+predictedValuesGBM <- predict(fitGBM, validation)
+confM.GBM <- confusionMatrix(validation$classe, predictedValuesGBM)
+
+# SVM prediction on validation set
+predictedValuesSVM <- predict(fitSVM, validation)
+confM.SVM <- confusionMatrix(validation$classe, predictedValuesSVM)
+
+# PCA prediction on validation set
+predictedValuesPCA <- predict(fitPCA, validation) 
+confM.PCA <- confusionMatrix(validation$classe, predictedValuesPCA)
+
+outSample.Accuracy <- c(as.numeric(confM.TREE$overall[1]),
+                        as.numeric(confM.RF$overall[1]),
+                        as.numeric(confM.GBM$overall[1]),
+                        as.numeric(confM.SVM$overall[1]),
+                        as.numeric(confM.PCA$overall[1])
+                        )
+outSample.Error <- c(1 - as.numeric(confM.TREE$overall[1]),
+                     1 - as.numeric(confM.RF$overall[1]),
+                     1 - as.numeric(confM.GBM$overall[1]),
+                     1 - as.numeric(confM.SVM$overall[1]),
+                     1 - as.numeric(confM.PCA$overall[1])
+                        )
+errors.df <- data.frame(method = method, 
+                        inSample.Acc = inSample.Accuracy, 
+                        inSample.Err = inSample.Error, 
+                        outSample.Acc = outSample.Accuracy, 
+                        outSample.Err = outSample.Error, 
+                        stringsAsFactors=FALSE)
+errors.df
+```
+
+```{r, echo=FALSE}
+declare <- NULL
+declare <- rbind(declare, paste('Lowest in-sample error: ', round(as.vector(errors.df[which.max(errors.df$inSample.Acc), 2]), 4)*100, '% with method ', as.vector(errors.df[which.max(errors.df$inSample.Acc), 1]), '.\n', sep=''))
+declare <- rbind(declare, paste('Lowest out-sample error: ', round(as.vector(errors.df[which.max(errors.df$outSample.Acc), 4]), 4)*100, '% with method ', as.vector(errors.df[which.max(errors.df$outSample.Acc), 1]), '.', sep=''))
+cat(declare)
+```
+
+
+**Accuracy comparison plot**
+```{r PlotAccuracy, fig.width=11, fig.height=5}
+library('reshape2')
+meltErrors <- melt(errors.df, id=c('method'))
+ggplot(meltErrors, aes(x=variable, y=value, fill=method)) + 
+    geom_bar(position='dodge', stat='identity') + 
+    scale_fill_brewer(palette='Accent') + 
+    ggtitle('Accuracy & Errors per ML Method') + 
+    theme_bw() + 
+    theme(panel.grid.major.x = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          panel.grid.major.y = element_line(colour='grey60',
+                                            linetype='dashed'))
+```
+
+
+The random forest algorithm gives the best prediction rate on both the training and the validation data sets. It worths noting that the out-sample accuracy (on validation data set) is higher than the in-sample accuracy (on training data set), which is not common and should raised a flag for more attention.
+
+
+
+### Predict test cases
+
+```{r finalTest}
+predictedTEST <- predict(fitRF, test)
+predictedTEST
+# Save txt files for assignment submission
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+pml_write_files(predictedTEST)
+```
+
